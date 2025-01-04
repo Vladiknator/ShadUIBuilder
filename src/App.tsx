@@ -4,10 +4,10 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { Button } from './components/ui/button'
 import { Card } from './components/ui/card'
-import { GripVertical, PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon, Settings2, Trash2, Type } from 'lucide-react'
+import { GripVertical, PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon, Type, Table as TableIcon, X } from 'lucide-react'
 import { PieChart, LineChartComponent, BarChartComponent } from './components/ui/charts'
 import { TextBlock } from './components/ui/text-block'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from './components/ui/dialog'
+import { DataTable } from './components/ui/data-table'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
 import { Textarea } from './components/ui/textarea'
@@ -24,6 +24,7 @@ const BLOCK_TYPES = [
   { id: 'pie-chart', icon: PieChartIcon, label: 'Pie Chart', component: PieChart },
   { id: 'line-chart', icon: LineChartIcon, label: 'Line Chart', component: LineChartComponent },
   { id: 'bar-chart', icon: BarChartIcon, label: 'Bar Chart', component: BarChartComponent },
+  { id: 'data-table', icon: TableIcon, label: 'Data Table', component: DataTable },
 ]
 
 function App() {
@@ -31,12 +32,15 @@ function App() {
   const [layouts, setLayouts] = useState<BlockLayout[]>([])
   const [blockCount, setBlockCount] = useState(1)
   const [selectedBlock, setSelectedBlock] = useState<BlockLayout | null>(null)
+  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(256)
+  const [isResizing, setIsResizing] = useState(false)
 
   useEffect(() => {
     const updateWidth = () => {
       const container = document.querySelector('.layout-container')
       if (container) {
-        setWidth(container.clientWidth - 32)
+        const containerWidth = container.clientWidth - 32
+        setWidth(containerWidth)
       }
     }
 
@@ -44,6 +48,35 @@ function App() {
     window.addEventListener('resize', updateWidth)
     return () => window.removeEventListener('resize', updateWidth)
   }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = window.innerWidth - e.clientX
+        setPropertiesPanelWidth(Math.max(200, Math.min(600, newWidth)))
+        
+        const container = document.querySelector('.layout-container')
+        if (container) {
+          const containerWidth = container.clientWidth - 32
+          setWidth(containerWidth)
+        }
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
 
   const defaultColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B'];
 
@@ -87,7 +120,6 @@ function App() {
       l.i === block.i ? { ...l, title: newTitle, data: newData } : l
     )
     setLayouts(updatedLayouts)
-    setSelectedBlock(null)
   }
 
   const deleteBlock = (blockId: string) => {
@@ -110,19 +142,10 @@ function App() {
     return null
   }
 
-  const handleChartDataChange = (data: Array<{ name: string; value: number; color?: string }>) => {
-    if (selectedBlock) {
-      setSelectedBlock({
-        ...selectedBlock,
-        data: JSON.stringify(data, null, 2)
-      })
-    }
-  }
-
   return (
     <div className="flex h-screen">
       <div className="w-64 border-r bg-muted/30 p-4">
-        <h2 className="mb-4 font-semibold">Chart Types</h2>
+        <h2 className="mb-4 font-semibold">Add Blocks</h2>
         <div className="space-y-2">
           {BLOCK_TYPES.map((blockType) => (
             <Button
@@ -161,107 +184,131 @@ function App() {
             {layouts.map((layout) => (
               <div key={layout.i}>
                 <Card className="h-full">
-                  <div className="flex items-center justify-between p-3 border-b bg-muted/50">
-                    <div className="drag-handle flex items-center gap-2 cursor-move">
+                  <div 
+                    className="flex items-center justify-between p-3 border-b bg-muted/50 drag-handle cursor-move"
+                    onMouseDown={(e) => {
+                      if (e.button === 0) {
+                        setSelectedBlock(layout);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
                       <GripVertical className="h-4 w-4" />
                       <span className="text-sm font-medium">
                         {layout.title || `${BLOCK_TYPES.find(b => b.id === layout.type)?.label || 'Chart'} ${layout.i}`}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setSelectedBlock(layout)}
-                          >
-                            <Settings2 className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-                          <DialogHeader>
-                            <DialogTitle>Block Properties</DialogTitle>
-                          </DialogHeader>
-                          {selectedBlock && (
-                            <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="title">Title</Label>
-                                <Input
-                                  id="title"
-                                  value={selectedBlock.title}
-                                  onChange={(e) => {
-                                    setSelectedBlock({
-                                      ...selectedBlock,
-                                      title: e.target.value
-                                    })
-                                  }}
-                                />
-                              </div>
-                              {selectedBlock.type === 'text' ? (
-                                <div className="grid gap-2">
-                                  <Label htmlFor="content">Content</Label>
-                                  <Textarea
-                                    id="content"
-                                    value={selectedBlock.data ? JSON.parse(selectedBlock.data).content : ''}
-                                    rows={10}
-                                    onChange={(e) => {
-                                      setSelectedBlock({
-                                        ...selectedBlock,
-                                        data: JSON.stringify({ content: e.target.value })
-                                      })
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="grid gap-2">
-                                  <Label htmlFor="data">Chart Data</Label>
-                                  <ChartDataForm
-                                    data={selectedBlock.data ? JSON.parse(selectedBlock.data) : []}
-                                    onChange={handleChartDataChange}
-                                    showColorPicker={selectedBlock.type === 'pie-chart'}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          <DialogFooter className="gap-2">
-                            <Button
-                              variant="destructive"
-                              onClick={() => deleteBlock(selectedBlock?.i || '')}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </Button>
-                            <DialogClose asChild>
-                              <Button
-                                type="submit"
-                                onClick={() => {
-                                  if (selectedBlock) {
-                                    updateBlockProperties(
-                                      selectedBlock,
-                                      selectedBlock.title || '',
-                                      selectedBlock.data || ''
-                                    )
-                                  }
-                                }}
-                              >
-                                Save changes
-                              </Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteBlock(layout.i);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="p-4 h-[calc(100%-48px)]">
+                  <div 
+                    className="p-4 h-[calc(100%-48px)] cursor-pointer"
+                    onClick={() => setSelectedBlock(layout)}
+                  >
                     {renderBlockContent(layout)}
                   </div>
                 </Card>
               </div>
             ))}
           </GridLayout>
+        </div>
+      </div>
+
+      <div 
+        className="relative bg-muted/30 flex"
+        style={{ width: propertiesPanelWidth }}
+      >
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            setIsResizing(true)
+          }}
+        />
+        <div className="flex-1 p-4 border-l">
+          <h2 className="mb-4 font-semibold">Properties</h2>
+          {selectedBlock ? (
+            <div className="space-y-2">
+              <div className="rounded-md border bg-card text-card-foreground p-4">
+                <div className="grid gap-2">
+                  <Label>Type</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {BLOCK_TYPES.find(b => b.id === selectedBlock.type)?.label}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-md border bg-card text-card-foreground p-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={selectedBlock.title}
+                    onChange={(e) => {
+                      const newBlock = {
+                        ...selectedBlock,
+                        title: e.target.value
+                      };
+                      setSelectedBlock(newBlock);
+                      updateBlockProperties(newBlock, e.target.value, newBlock.data || '');
+                    }}
+                  />
+                </div>
+              </div>
+              {selectedBlock.type === 'text' ? (
+                <div className="rounded-md border bg-card text-card-foreground p-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="content">Content</Label>
+                    <Textarea
+                      id="content"
+                      value={selectedBlock.data ? JSON.parse(selectedBlock.data).content : ''}
+                      rows={10}
+                      onChange={(e) => {
+                        const newData = JSON.stringify({ content: e.target.value });
+                        const newBlock = {
+                          ...selectedBlock,
+                          data: newData
+                        };
+                        setSelectedBlock(newBlock);
+                        updateBlockProperties(newBlock, newBlock.title || '', newData);
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border bg-card text-card-foreground p-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="data">Chart Data</Label>
+                    <ChartDataForm
+                      data={selectedBlock.data ? JSON.parse(selectedBlock.data) : []}
+                      onChange={(chartData) => {
+                        const newData = JSON.stringify(chartData);
+                        const newBlock = {
+                          ...selectedBlock,
+                          data: newData
+                        };
+                        setSelectedBlock(newBlock);
+                        updateBlockProperties(newBlock, newBlock.title || '', newData);
+                      }}
+                      showColorPicker={selectedBlock.type === 'pie-chart'}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Select a block to edit its properties
+            </div>
+          )}
         </div>
       </div>
     </div>
