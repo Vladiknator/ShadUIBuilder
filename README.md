@@ -1,50 +1,75 @@
-# React + TypeScript + Vite
+# ShadUI Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A prototype layout builder that allows users to create dynamic dashboards with draggable and resizable components. Built with React, TypeScript, and Shadcn UI components.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Drag-and-drop interface for arranging components
+- Resizable blocks with minimum size constraints
+- Multiple chart types:
+  - Pie Charts with customizable colors
+  - Line Charts
+  - Bar Charts
+- Text blocks with markdown support
+- Properties panel for each component
+- Real-time data editing
+- Modern, clean UI using Shadcn components
 
-## Expanding the ESLint configuration
+## Technologies Used
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **React** - Frontend framework
+- **TypeScript** - Type-safe JavaScript
+- **Vite** - Build tool and development server
+- **Shadcn UI** - Component library and styling
+- **Tailwind CSS** - Utility-first CSS framework
+- **React Grid Layout** - Drag-and-drop grid system
+- **Recharts** - Chart library
+- **Radix UI** - Primitive UI components
+- **Lucide React** - Icon library
 
-- Configure the top-level `parserOptions` property like this:
+## Getting Started
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/ShadUIBuilder.git
+cd ShadUIBuilder
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+2. Install dependencies:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+npm install
 ```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+## Usage
+
+1. Add blocks using the sidebar buttons
+2. Drag blocks by their headers to rearrange
+3. Resize blocks using the bottom-right handle
+4. Click the settings icon to edit block properties
+5. Edit chart data using the properties panel
+6. Customize colors for pie charts
+7. Add and remove data points as needed
+
+## Project Structure
+
+- `/src/components/ui` - Shadcn UI components
+- `/src/components/ui/charts.tsx` - Chart components
+- `/src/App.tsx` - Main application logic
+- `/src/lib` - Utility functions
