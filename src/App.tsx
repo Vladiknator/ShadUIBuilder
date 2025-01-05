@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import GridLayout, { Layout } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
+import './App.css'
 import { Button } from './components/ui/button'
 import { Card } from './components/ui/card'
-import { GripVertical, PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon, Type, Table as TableIcon, X } from 'lucide-react'
+import { GripVertical, PieChart as PieChartIcon, LineChart as LineChartIcon, BarChart as BarChartIcon, Type, Table as TableIcon, X, Moon, Sun } from 'lucide-react'
 import { PieChart, LineChartComponent, BarChartComponent } from './components/ui/charts'
 import { TextBlock } from './components/ui/text-block'
 import { DataTable } from './components/ui/data-table'
@@ -12,6 +13,7 @@ import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
 import { Textarea } from './components/ui/textarea'
 import { ChartDataForm } from './components/ui/chart-data-form'
+import { useTheme } from './components/theme-provider'
 
 interface BlockLayout extends Layout {
   type: string;
@@ -34,6 +36,7 @@ function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockLayout | null>(null)
   const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(256)
   const [isResizing, setIsResizing] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     const updateWidth = () => {
@@ -81,10 +84,50 @@ function App() {
   const defaultColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B'];
 
   const addNewBlock = (type: string) => {
+    // Calculate number of columns based on width
+    const cols = Math.max(6, Math.floor(width / 150))
+    
+    // Create a 2D grid to track occupied spaces
+    const grid: boolean[][] = []
+    for (let y = 0; y < 100; y++) {
+      grid[y] = new Array(cols).fill(false)
+    }
+
+    // Mark occupied spaces
+    layouts.forEach(layout => {
+      for (let y = layout.y; y < layout.y + layout.h; y++) {
+        for (let x = layout.x; x < layout.x + layout.w; x++) {
+          if (grid[y]) grid[y][x] = true
+        }
+      }
+    });
+
+    // Find first available space
+    let position = { x: 0, y: 0 }
+    outerLoop: for (let y = 0; y < 100; y++) {
+      for (let x = 0; x <= cols - 4; x++) { // -4 for default width
+        let spaceAvailable = true
+        // Check if there's enough space for the block
+        for (let dy = 0; dy < (type === 'text' ? 3 : 5); dy++) {
+          for (let dx = 0; dx < 4; dx++) {
+            if (grid[y + dy]?.[x + dx]) {
+              spaceAvailable = false;
+              break;
+            }
+          }
+          if (!spaceAvailable) break;
+        }
+        if (spaceAvailable) {
+          position = { x, y };
+          break outerLoop;
+        }
+      }
+    }
+
     const newBlock: BlockLayout = {
       i: `block${blockCount}`,
-      x: (layouts.length * 2) % (Math.floor(width / 150)),
-      y: Infinity,
+      x: position.x,
+      y: position.y,
       w: 4,
       h: type === 'text' ? 3 : 5,
       type,
@@ -145,7 +188,20 @@ function App() {
   return (
     <div className="flex h-screen">
       <div className="w-64 border-r bg-muted/30 p-4">
-        <h2 className="mb-4 font-semibold">Add Blocks</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">Add Blocks</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          >
+            {theme === "light" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
         <div className="space-y-2">
           {BLOCK_TYPES.map((blockType) => (
             <Button
