@@ -224,7 +224,7 @@ function App() {
             layout={layouts.map(l => ({
               ...l,
               minH: l.type !== 'text' ? 3 : 2,
-              minW: 3
+              minW: l.type !== 'text' ? 3 : 1,
             }))}
             cols={Math.max(6, Math.floor(width / 150))}
             rowHeight={80}
