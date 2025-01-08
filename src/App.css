@@ -3,6 +3,11 @@
   border-bottom: 2px solid rgba(255, 255, 255, 0.8) !important;
 }
 
+/* Make the grid layout fill available space */
+.layout {
+  min-height: 100% !important;
+}
+
 /* Drag and drop styles */
 .layout-container.drag-over {
   outline: 2px dashed hsl(var(--accent));

@@ -41,6 +41,8 @@ function App() {
         const availableWidth = window.innerWidth - sidebarWidth - (isPanelVisible ? propertiesPanelWidth : 0);
         // Set width with minimum of 400px
         const containerWidth = Math.max(400, availableWidth - containerPadding - 16);
+
+        
         setWidth(containerWidth);
       }
     }
@@ -78,12 +80,49 @@ function App() {
   // Add a new block to the grid
   const addNewBlock = (type: string) => {
     const constraints = BLOCK_CONSTRAINTS[type as keyof typeof BLOCK_CONSTRAINTS];
+    const currentLayout = layouts[currentBreakpoint] || [];
     
+    // Find first available position
+    const occupiedSpaces = new Set<string>();
+    currentLayout.forEach(block => {
+      for (let x = block.x; x < block.x + block.w; x++) {
+        for (let y = block.y; y < block.y + block.h; y++) {
+          occupiedSpaces.add(`${x},${y}`);
+        }
+      }
+    });
+
+    // Find first position that can fit the new block
+    let position = { x: 0, y: 0 };
+    const cols = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }[currentBreakpoint] || 12;
+
+    // Search row by row until we find a space
+    searchLoop:
+    for (let y = 0; y < 1000; y++) { // Limit search to prevent infinite loop
+      for (let x = 0; x <= cols - constraints.defaultW; x++) {
+        // Check if this position can fit the block
+        let canFit = true;
+        for (let dx = 0; dx < constraints.defaultW; dx++) {
+          for (let dy = 0; dy < constraints.defaultH; dy++) {
+            if (occupiedSpaces.has(`${x + dx},${y + dy}`)) {
+              canFit = false;
+              break;
+            }
+          }
+          if (!canFit) break;
+        }
+        if (canFit) {
+          position = { x, y };
+          break searchLoop;
+        }
+      }
+    }
+
     // Create new block with default data
     const newBlock: BlockLayout = {
       i: `block-${blockCount}`,
-      x: 0,
-      y: 0,
+      x: position.x,
+      y: position.y,
       w: constraints.defaultW,
       h: constraints.defaultH,
       minW: constraints.minW,
@@ -120,7 +159,7 @@ function App() {
 
     setLayouts(prev => ({
       ...prev,
-      [currentBreakpoint]: [...(prev[currentBreakpoint] || []), newBlock]
+      [currentBreakpoint]: [...currentLayout, newBlock]
     }));
     setBlockCount(blockCount + 1);
   };
@@ -275,7 +314,7 @@ function App() {
       {/* Main grid area */}
       <div className="flex-1 overflow-auto p-4">
         <div 
-          className="layout-container bg-muted rounded-lg p-0"
+          className="layout-container bg-muted rounded-lg p-0 min-h-[calc(100%)]"
           onDragOver={handleDragOver}
         >
           <ResponsiveGridLayout
@@ -296,6 +335,7 @@ function App() {
             onDrop={handleDrop}
             droppingItem={getDroppingItem(draggingBlockType)}
             useCSSTransforms={mounted}
+            autoSize={true}
           >
             {(layouts[currentBreakpoint] || []).map((layout) => (
               <div key={layout.i}>
