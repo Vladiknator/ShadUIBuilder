@@ -5,7 +5,7 @@
 
 /* Make the grid layout fill available space */
 .layout {
-  min-height: 100% !important;
+  min-height: calc(100vh - 2rem) !important;
 }
 
 /* Drag and drop styles */

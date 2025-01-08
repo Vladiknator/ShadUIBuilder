@@ -314,7 +314,7 @@ function App() {
       {/* Main grid area */}
       <div className="flex-1 overflow-auto p-4">
         <div 
-          className="layout-container bg-muted rounded-lg p-0 min-h-[calc(100%)]"
+          className="layout-container bg-muted rounded-lg p-0 min-h-[100%] h-auto"
           onDragOver={handleDragOver}
         >
           <ResponsiveGridLayout
