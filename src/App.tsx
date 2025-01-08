@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import GridLayout, { Layout } from 'react-grid-layout'
+import { Responsive, WidthProvider } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import './App.css'
@@ -8,14 +8,17 @@ import { Sidebar } from './components/sidebar'
 import { PropertiesPanel } from './components/properties-panel'
 import { GridBlock } from './components/grid-block'
 
-// Block type constraints
-const BLOCK_CONSTRAINTS = {
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
+// Define size constraints for each block type
+// This ensures blocks maintain appropriate dimensions based on their content
+export const BLOCK_CONSTRAINTS = {
   'data-table': {
-    defaultW: 6,
-    defaultH: 5,
-    minW: 3,
-    minH: 5,
-    maxW: 12,
+    defaultW: 6,    // Default width in grid units
+    defaultH: 5,    // Default height in grid units
+    minW: 3,        // Minimum allowed width
+    minH: 5,        // Minimum allowed height
+    maxW: 12,       // Maximum allowed width
   },
   'pie-chart': {
     defaultW: 4,
@@ -48,22 +51,34 @@ const BLOCK_CONSTRAINTS = {
 } as const;
 
 function App() {
-  const [width, setWidth] = useState(1200)
-  const [layouts, setLayouts] = useState<BlockLayout[]>([])
-  const [blockCount, setBlockCount] = useState(1)
-  const [selectedBlock, setSelectedBlock] = useState<BlockLayout | null>(null)
-  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(256)
-  const [isResizing, setIsResizing] = useState(false)
-  const [isPanelVisible, setIsPanelVisible] = useState(true)
-  const [gridColumns, setGridColumns] = useState(getGridColumns())
+  // Grid and layout state
+  const [width, setWidth] = useState(1200)                    // Width of the grid container
+  const [layouts, setLayouts] = useState<{ [key: string]: BlockLayout[] }>({ lg: [] })   // Responsive layouts
+  const [blockCount, setBlockCount] = useState(1)             // Counter for generating unique block IDs
+  const [currentBreakpoint, setCurrentBreakpoint] = useState('lg')
+  const [mounted, setMounted] = useState(false)
+  const [draggingBlockType, setDraggingBlockType] = useState<string | null>(null)
 
+  // Properties panel state
+  const [selectedBlock, setSelectedBlock] = useState<BlockLayout | null>(null)  // Currently selected block
+  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(256)        // Width of properties panel
+  const [isResizing, setIsResizing] = useState(false)                          // Whether panel is being resized
+  const [isPanelVisible, setIsPanelVisible] = useState(true)                   // Whether panel is visible
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Update grid width when panel visibility or width changes
   useEffect(() => {
     const updateWidth = () => {
       const container = document.querySelector('.layout-container')
       if (container) {
-        const sidebarWidth = 256;
-        const containerPadding = 32;
+        const sidebarWidth = 256;                // Width of the sidebar
+        const containerPadding = 32;             // Total padding of the container
+        // Calculate available width accounting for sidebar and properties panel
         const availableWidth = window.innerWidth - sidebarWidth - (isPanelVisible ? propertiesPanelWidth : 0);
+        // Set width with minimum of 400px
         const containerWidth = Math.max(400, availableWidth - containerPadding - 16);
         setWidth(containerWidth);
       }
@@ -74,25 +89,11 @@ function App() {
     return () => window.removeEventListener('resize', updateWidth)
   }, [isPanelVisible, propertiesPanelWidth])
 
-  function getGridColumns() {
-    const sidebarWidth = 256;
-    const containerPadding = 32;
-    const screenWidth = window.innerWidth - sidebarWidth;
-    return Math.max(6, Math.floor((screenWidth - containerPadding - 16) / 150));
-  }
-
-  useEffect(() => {
-    const updateColumns = () => {
-      setGridColumns(getGridColumns());
-    }
-
-    window.addEventListener('resize', updateColumns);
-    return () => window.removeEventListener('resize', updateColumns);
-  }, []);
-
+  // Handle properties panel resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizing) {
+        // Calculate new panel width based on mouse position
         const newWidth = window.innerWidth - e.clientX
         setPropertiesPanelWidth(Math.max(200, Math.min(600, newWidth)))
       }
@@ -113,74 +114,15 @@ function App() {
     }
   }, [isResizing])
 
+  // Add a new block to the grid
   const addNewBlock = (type: string) => {
-    const cols = Math.max(12, Math.floor(width / 150));
     const constraints = BLOCK_CONSTRAINTS[type as keyof typeof BLOCK_CONSTRAINTS];
     
-    const grid: boolean[][] = [];
-    for (let y = 0; y < 100; y++) {
-      grid[y] = new Array(cols).fill(false);
-    }
-
-    layouts.forEach(layout => {
-      for (let y = layout.y; y < layout.y + layout.h; y++) {
-        for (let x = layout.x; x < layout.x + layout.w; x++) {
-          if (grid[y]) grid[y][x] = true;
-        }
-      }
-    });
-
-    let position = { x: 0, y: 0 };
-    outerLoop: for (let y = 0; y < 100; y++) {
-      for (let x = 0; x <= cols - constraints.defaultW; x++) {
-        let spaceAvailable = true;
-        for (let dy = 0; dy < constraints.defaultH; dy++) {
-          for (let dx = 0; dx < constraints.defaultW; dx++) {
-            if (grid[y + dy]?.[x + dx]) {
-              spaceAvailable = false;
-              break;
-            }
-          }
-          if (!spaceAvailable) break;
-        }
-        if (spaceAvailable) {
-          position = { x, y };
-          break outerLoop;
-        }
-      }
-    }
-
-    let defaultData;
-    switch (type) {
-      case 'pie-chart':
-        defaultData = [
-          { name: 'A', value: 400, color: '#0088FE' },
-          { name: 'B', value: 300, color: '#00C49F' },
-          { name: 'C', value: 200, color: '#FFBB28' },
-        ];
-        break;
-      case 'line-chart':
-      case 'bar-chart':
-        defaultData = [
-          { name: 'Jan', value: 400 },
-          { name: 'Feb', value: 300 },
-          { name: 'Mar', value: 200 },
-        ];
-        break;
-      case 'text':
-        defaultData = { content: 'Enter your text here...' };
-        break;
-      case 'data-table':
-        defaultData = defaultTableData;
-        break;
-      default:
-        defaultData = null;
-    }
-
+    // Create new block with default data
     const newBlock: BlockLayout = {
       i: `block-${blockCount}`,
-      x: position.x,
-      y: position.y,
+      x: 0,
+      y: 0,
       w: constraints.defaultW,
       h: constraints.defaultH,
       minW: constraints.minW,
@@ -188,64 +130,213 @@ function App() {
       maxW: constraints.maxW,
       type,
       title: `${BLOCK_TYPES.find(b => b.id === type)?.label || 'Chart'} ${blockCount + 1}`,
-      data: defaultData ? JSON.stringify(defaultData) : undefined,
     };
 
-    setLayouts([...layouts, newBlock]);
+    // Initialize default data based on block type
+    switch (type) {
+      case 'pie-chart':
+        newBlock.data = JSON.stringify([
+          { name: 'A', value: 400, color: '#0088FE' },
+          { name: 'B', value: 300, color: '#00C49F' },
+          { name: 'C', value: 200, color: '#FFBB28' },
+        ]);
+        break;
+      case 'line-chart':
+      case 'bar-chart':
+        newBlock.data = JSON.stringify([
+          { name: 'Jan', value: 400 },
+          { name: 'Feb', value: 300 },
+          { name: 'Mar', value: 200 },
+        ]);
+        break;
+      case 'text':
+        newBlock.data = JSON.stringify({ content: 'Enter your text here...' });
+        break;
+      case 'data-table':
+        newBlock.data = JSON.stringify(defaultTableData);
+        break;
+    }
+
+    setLayouts(prev => ({
+      ...prev,
+      [currentBreakpoint]: [...(prev[currentBreakpoint] || []), newBlock]
+    }));
     setBlockCount(blockCount + 1);
   };
 
-  const handleLayoutChange = (newLayout: Layout[]) => {
-    const updatedLayout = newLayout.map(item => ({
-      ...layouts.find(l => l.i === item.i),
+  // Update layout when blocks are moved or resized
+  const handleLayoutChange = (currentLayout: BlockLayout[], allLayouts: { [key: string]: BlockLayout[] }) => {
+    // Filter out any placeholder items (they have a special 'i' property that starts with '__dropping-elem')
+    const filteredLayout = currentLayout.filter(item => !item.i.startsWith('__dropping-elem'));
+    const currentBlocks = layouts[currentBreakpoint] || [];
+    
+    const updatedLayout = filteredLayout.map(item => ({
+      ...currentBlocks.find(l => l.i === item.i),
       ...item,
-    }))
-    setLayouts(updatedLayout as BlockLayout[])
-  }
-
-  const updateBlockProperties = (blockId: string, updates: Partial<BlockLayout>) => {
-    const updatedLayouts = layouts.map(block => {
-      if (block.i === blockId) {
-        const updatedBlock = { ...block, ...updates };
-        if (selectedBlock?.i === blockId) {
-          setSelectedBlock(updatedBlock);
-        }
-        return updatedBlock;
-      }
-      return block;
+    }));
+    
+    setLayouts({
+      ...allLayouts,
+      [currentBreakpoint]: updatedLayout as BlockLayout[]
     });
-    setLayouts(updatedLayouts);
   };
 
+  // Update block properties (title, data, etc.)
+  const updateBlockProperties = (blockId: string, updates: Partial<BlockLayout>) => {
+    setLayouts(prev => {
+      const currentBlocks = prev[currentBreakpoint] || [];
+      const updatedBlocks = currentBlocks.map(block => {
+        if (block.i === blockId) {
+          const updatedBlock = { ...block, ...updates };
+          if (selectedBlock?.i === blockId) {
+            setSelectedBlock(updatedBlock);
+          }
+          return updatedBlock;
+        }
+        return block;
+      });
+      
+      return {
+        ...prev,
+        [currentBreakpoint]: updatedBlocks
+      };
+    });
+  };
+
+  // Delete a block from the grid
   const deleteBlock = (blockId: string) => {
-    setLayouts(layouts.filter(l => l.i !== blockId))
-    setSelectedBlock(null)
-  }
+    setLayouts(prev => ({
+      ...prev,
+      [currentBreakpoint]: (prev[currentBreakpoint] || []).filter(l => l.i !== blockId)
+    }));
+    setSelectedBlock(null);
+  };
+
+  // Handle drag over to update dropping item dimensions
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  // Handle drag start from sidebar
+  const handleDragStart = (blockType: string) => {
+    setDraggingBlockType(blockType);
+  };
+
+  // Get dropping item dimensions based on block type
+  const getDroppingItem = (blockType: string | null) => {
+    if (!blockType) return undefined;
+    const constraints = BLOCK_CONSTRAINTS[blockType as keyof typeof BLOCK_CONSTRAINTS];
+    return {
+      i: "__dropping-elem__",
+      w: constraints.defaultW,
+      h: constraints.defaultH
+    };
+  };
+
+  // Handle drop from outside
+  const handleDrop = (_layout: BlockLayout[], layoutItem: BlockLayout) => {
+    const type = draggingBlockType;
+    setDraggingBlockType(null);
+    if (!type) return;
+
+    const constraints = BLOCK_CONSTRAINTS[type as keyof typeof BLOCK_CONSTRAINTS];
+    
+    // Create new block at drop position
+    const newBlock: BlockLayout = {
+      i: `block-${blockCount}`,
+      x: layoutItem.x,
+      y: layoutItem.y,
+      w: constraints.defaultW,
+      h: constraints.defaultH,
+      minW: constraints.minW,
+      minH: constraints.minH,
+      maxW: constraints.maxW,
+      type,
+      title: `${BLOCK_TYPES.find(b => b.id === type)?.label || 'Chart'} ${blockCount + 1}`,
+    };
+
+    // Initialize default data based on block type
+    switch (type) {
+      case 'pie-chart':
+        newBlock.data = JSON.stringify([
+          { name: 'A', value: 400, color: '#0088FE' },
+          { name: 'B', value: 300, color: '#00C49F' },
+          { name: 'C', value: 200, color: '#FFBB28' },
+        ]);
+        break;
+      case 'line-chart':
+      case 'bar-chart':
+        newBlock.data = JSON.stringify([
+          { name: 'Jan', value: 400 },
+          { name: 'Feb', value: 300 },
+          { name: 'Mar', value: 200 },
+        ]);
+        break;
+      case 'text':
+        newBlock.data = JSON.stringify({ content: 'Enter your text here...' });
+        break;
+      case 'data-table':
+        newBlock.data = JSON.stringify(defaultTableData);
+        break;
+    }
+
+    // Get the current blocks and their updated positions from the layout
+    const currentBlocks = layouts[currentBreakpoint] || [];
+    const updatedPositions = _layout.filter(item => !item.i.startsWith('__dropping-elem__'));
+    
+    // Create new blocks array with updated positions for existing blocks
+    const updatedBlocks = currentBlocks.map(block => {
+      const updatedPosition = updatedPositions.find(pos => pos.i === block.i);
+      return updatedPosition ? { ...block, ...updatedPosition } : block;
+    });
+
+    // Add the new block
+    updatedBlocks.push(newBlock);
+    
+    // Update the layout with all blocks in their correct positions
+    setLayouts(prev => ({
+      ...prev,
+      [currentBreakpoint]: updatedBlocks
+    }));
+    setBlockCount(blockCount + 1);
+  };
 
   return (
     <div className="flex h-screen">
+      {/* Sidebar with block types and controls */}
       <Sidebar
         onAddBlock={addNewBlock}
         isPanelVisible={isPanelVisible}
         onTogglePanel={() => setIsPanelVisible(!isPanelVisible)}
+        onDragStart={handleDragStart}
       />
 
+      {/* Main grid area */}
       <div className="flex-1 overflow-auto p-4">
-        <div className="layout-container bg-muted rounded-lg p-0">
-          <GridLayout
+        <div 
+          className="layout-container bg-muted rounded-lg p-0"
+          onDragOver={handleDragOver}
+        >
+          <ResponsiveGridLayout
             className="layout"
-            layout={layouts}
-            cols={gridColumns}
+            layouts={layouts}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={100}
             width={width}
             onLayoutChange={handleLayoutChange}
+            onBreakpointChange={setCurrentBreakpoint}
             compactType="vertical"
             preventCollision={false}
             resizeHandles={['se']}
             margin={[16, 16]}
             containerPadding={[16, 16]}
+            isDroppable={true}
+            onDrop={handleDrop}
+            droppingItem={getDroppingItem(draggingBlockType)}
+            useCSSTransforms={mounted}
           >
-            {layouts.map((layout) => (
+            {(layouts[currentBreakpoint] || []).map((layout) => (
               <div key={layout.i}>
                 <GridBlock
                   layout={layout}
@@ -255,10 +346,11 @@ function App() {
                 />
               </div>
             ))}
-          </GridLayout>
+          </ResponsiveGridLayout>
         </div>
       </div>
 
+      {/* Properties panel */}
       {isPanelVisible && (
         <PropertiesPanel
           selectedBlock={selectedBlock}

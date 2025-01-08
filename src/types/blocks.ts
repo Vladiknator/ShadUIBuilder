@@ -11,6 +11,7 @@ export interface BlockLayout extends Layout {
   minH?: number;
   minW?: number;
   maxW?: number;
+  isDragging?: boolean;
 }
 
 export const BLOCK_TYPES = [
