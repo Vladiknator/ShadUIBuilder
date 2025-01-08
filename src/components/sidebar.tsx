@@ -1,8 +1,8 @@
 import { Button } from './ui/button'
 import { Moon, Sun, PanelRightClose, PanelRight } from 'lucide-react'
 import { BLOCK_TYPES } from '../types/blocks'
+import { BLOCK_CONSTRAINTS } from '../types/constraints'
 import { useTheme } from './theme-provider'
-import { BLOCK_CONSTRAINTS } from '../App'
 
 interface SidebarProps {
   onAddBlock: (type: string) => void
