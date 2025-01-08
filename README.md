@@ -2,6 +2,8 @@
 
 A prototype layout builder that allows users to create dynamic dashboards with draggable and resizable components. Built with React, TypeScript, and Shadcn UI components.
 
+Live demo Availible at: https://vladiknator.github.io/ShadUIBuilder/
+
 ## Features
 
 - Drag-and-drop interface for arranging components
