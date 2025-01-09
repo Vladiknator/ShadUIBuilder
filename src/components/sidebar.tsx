@@ -1,8 +1,9 @@
 import { Button } from './ui/button'
-import { Moon, Sun, PanelRightClose, PanelRight } from 'lucide-react'
+import { Moon, Sun, PanelRightClose, PanelRight, Home } from 'lucide-react'
 import { BLOCK_TYPES } from '../types/blocks'
 import { BLOCK_CONSTRAINTS } from '../types/constraints'
 import { useTheme } from './theme-provider'
+import { useNavigate } from 'react-router-dom'
 
 interface SidebarProps {
   onAddBlock: (type: string) => void
@@ -13,6 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ onAddBlock, isPanelVisible, onTogglePanel, onDragStart }: SidebarProps) {
   const { theme, setTheme } = useTheme()
+  const navigate = useNavigate()
 
   const handleDragStart = (e: React.DragEvent<HTMLButtonElement>, blockType: string) => {
     const constraints = BLOCK_CONSTRAINTS[blockType as keyof typeof BLOCK_CONSTRAINTS];
@@ -71,6 +73,14 @@ export function Sidebar({ onAddBlock, isPanelVisible, onTogglePanel, onDragStart
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold">Add Blocks</h2>
         <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            title="Return to Home"
+          >
+            <Home className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

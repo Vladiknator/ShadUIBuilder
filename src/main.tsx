@@ -1,13 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
 import './index.css'
-import { ThemeProvider } from './components/theme-provider.tsx'
+import './App.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="light" storageKey="shadui-builder-theme">
-      <App />
-    </ThemeProvider>
+    <App />
   </React.StrictMode>,
 )
