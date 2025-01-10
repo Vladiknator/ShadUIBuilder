@@ -35,10 +35,11 @@ const nodeTypes = {
 const defaultEdgeOptions: DefaultEdgeOptions = {
   animated: true,
   type: 'smoothstep',
+  style: { strokeWidth: 4 },
   markerEnd: {
     type: MarkerType.Arrow,
-    width: 20,
-    height: 20,
+    width: 10,
+    height: 10,
     color: '#999'
   }
 }

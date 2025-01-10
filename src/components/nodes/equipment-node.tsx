@@ -14,6 +14,16 @@ const equipmentIcons: { [key: string]: string } = {
   tank: tankSvg
 }
 
+const handleStyle = {
+  width: 10,
+  height: 10,
+  background: '#fff',
+  border: '2px solid #778899',
+  top: '-5px',
+  left: '50%',
+  transform: 'translate(-50%, 0)'
+}
+
 export function EquipmentNode({ data, selected }: NodeProps<EquipmentNodeData>) {
   const icon = equipmentIcons[data.type]
 
@@ -28,21 +38,40 @@ export function EquipmentNode({ data, selected }: NodeProps<EquipmentNodeData>) 
       <Handle 
         type="source" 
         position={Position.Top} 
+        style={handleStyle}
         id="t"
       />
       <Handle 
         type="source" 
         position={Position.Left} 
+        style={{
+          ...handleStyle,
+          top: '50%',
+          left: '-5px',
+          transform: 'translate(0, -50%)'
+        }}
         id="l"
       />
       <Handle 
         type="source" 
         position={Position.Right} 
+        style={{
+          ...handleStyle,
+          top: '50%',
+          left: 'auto',
+          right: '-5px',
+          transform: 'translate(0, -50%)'
+        }}
         id="r"
       />
       <Handle 
         type="source" 
         position={Position.Bottom} 
+        style={{
+          ...handleStyle,
+          top: 'auto',
+          bottom: '-5px'
+        }}
         id="b"
       />
       <img src={icon} alt={data.label} className="w-full h-full object-contain" />
