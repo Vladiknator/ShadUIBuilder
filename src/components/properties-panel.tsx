@@ -10,14 +10,14 @@ interface PropertiesPanelProps {
   onUpdateNode: (nodeId: string, updates: Partial<Node['data']>) => void
 }
 
-export function PropertiesPanel({ selectedNode, width, onResize, onUpdateNode }: PropertiesPanelProps) {
+export function FlowPropertiesPanel({ selectedNode, width, onResize, onUpdateNode }: PropertiesPanelProps) {
   const [labelValue, setLabelValue] = useState('')
 
   useEffect(() => {
     if (selectedNode) {
       setLabelValue(selectedNode.data.title || selectedNode.data.label || '')
     }
-  }, [selectedNode?.id])
+  }, [selectedNode])
 
   if (!selectedNode) {
     return null

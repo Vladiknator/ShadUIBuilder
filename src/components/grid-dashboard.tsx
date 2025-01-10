@@ -6,7 +6,7 @@ import '../App.css'
 import { BlockLayout, BLOCK_TYPES, defaultTableData } from '../types/blocks'
 import { BLOCK_CONSTRAINTS } from '../types/constraints'
 import { Sidebar } from './sidebar'
-import { PropertiesPanel } from './properties-panel'
+import { GridPropertiesPanel } from './grid-properties-panel'
 import { GridBlock } from './grid-block'
 import { BlockTypesContent } from './sidebar-block-types'
 
@@ -338,10 +338,10 @@ export function GridDashboard() {
       </div>
 
       {isPanelVisible && (
-        <PropertiesPanel
+        <GridPropertiesPanel
           selectedBlock={selectedBlock}
           width={propertiesPanelWidth}
-          onResize={(e) => {
+          onResize={(e: React.MouseEvent) => {
             e.preventDefault();
             setIsResizing(true);
           }}

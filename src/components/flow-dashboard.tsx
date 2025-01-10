@@ -16,7 +16,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import '../App.css'
 import { Sidebar } from './sidebar'
-import { PropertiesPanel } from './properties-panel'
+import { FlowPropertiesPanel } from './properties-panel'
 import { FlowContent } from './sidebar-flow-content'
 import { HtmlNode } from './nodes/html-node'
 import { EquipmentNode } from './nodes/equipment-node'
@@ -88,7 +88,7 @@ export function FlowDashboard() {
   // Handle edge updates
   const onConnect = useCallback((params: Connection) => {
     setEdges(edges => addEdge(params, edges))
-  }, [])
+  }, [setEdges])
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -195,7 +195,7 @@ export function FlowDashboard() {
             className="w-1 h-full cursor-col-resize bg-border hover:bg-primary/50"
             onMouseDown={() => setIsResizing(true)}
           />
-          <PropertiesPanel
+          <FlowPropertiesPanel
             width={propertiesPanelWidth}
             selectedNode={selectedNode}
             onResize={() => setIsResizing(true)}
