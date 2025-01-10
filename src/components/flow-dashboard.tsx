@@ -11,7 +11,8 @@ import ReactFlow, {
   addEdge,
   ConnectionMode,
   DefaultEdgeOptions,
-  MarkerType
+  MarkerType,
+  SelectionMode
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import '../App.css'
@@ -181,6 +182,7 @@ export function FlowDashboard() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           connectionMode={ConnectionMode.Loose}
+          selectionMode={SelectionMode.Partial}
           fitView
         >
           <Background />
