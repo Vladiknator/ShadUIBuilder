@@ -8,6 +8,7 @@ import { BLOCK_CONSTRAINTS } from '../types/constraints'
 import { Sidebar } from './sidebar'
 import { PropertiesPanel } from './properties-panel'
 import { GridBlock } from './grid-block'
+import { BlockTypesContent } from './sidebar-block-types'
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -284,11 +285,15 @@ export function GridDashboard() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar 
-        onDragStart={handleDragStart} 
-        onAddBlock={addNewBlock}
+        title="Add Blocks"
         isPanelVisible={isPanelVisible}
         onTogglePanel={() => setIsPanelVisible(!isPanelVisible)}
-      />
+      >
+        <BlockTypesContent 
+          onDragStart={handleDragStart}
+          onAddBlock={addNewBlock}
+        />
+      </Sidebar>
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="layout-container flex-1 p-4 overflow-y-auto overflow-x-hidden">
