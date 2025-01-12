@@ -1,27 +1,21 @@
 import { Node } from 'reactflow'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
-import { useState, useEffect } from 'react'
+import { Slider } from './ui/slider'
+import { ChartDataForm } from './ui/chart-data-form'
 
 interface PropertiesPanelProps {
   selectedNode: Node | null
   width: number
-  onResize: (e: React.MouseEvent) => void
+  onResize: () => void
   onUpdateNode: (nodeId: string, updates: Partial<Node['data']>) => void
 }
 
 export function FlowPropertiesPanel({ selectedNode, width, onResize, onUpdateNode }: PropertiesPanelProps) {
-  const [labelValue, setLabelValue] = useState('')
+  if (!selectedNode) return null
 
-  useEffect(() => {
-    if (selectedNode) {
-      setLabelValue(selectedNode.data.title || selectedNode.data.label || '')
-    }
-  }, [selectedNode])
-
-  if (!selectedNode) {
-    return null
-  }
+  const showFontSize = selectedNode.type === 'button' || selectedNode.type === 'label'
+  const isChart = selectedNode.type === 'pieChart' || selectedNode.type === 'lineChart' || selectedNode.type === 'barChart'
 
   return (
     <div 
@@ -35,61 +29,49 @@ export function FlowPropertiesPanel({ selectedNode, width, onResize, onUpdateNod
       <div className="flex-1 p-4 border-l">
         <h2 className="mb-4 font-semibold">Properties</h2>
         <div className="space-y-4">
-          <div>
-            <Label>Type</Label>
-            <div className="text-sm text-muted-foreground capitalize">
-              {selectedNode.type}
-            </div>
-          </div>
-
-          <div>
+          <div className="space-y-2">
             <Label>Label</Label>
             <Input
-              value={labelValue}
-              onChange={(e) => {
-                const newValue = e.target.value
-                setLabelValue(newValue)
-                onUpdateNode(selectedNode.id, { 
-                  ...selectedNode.data,
-                  title: newValue 
-                })
-              }}
+              value={selectedNode.data.title || selectedNode.data.label || ''}
+              onChange={(e) => onUpdateNode(selectedNode.id, { 
+                ...selectedNode.data,
+                title: e.target.value 
+              })}
             />
           </div>
 
-          <div>
-            <Label>Position</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">X</Label>
-                <Input
-                  type="number"
-                  value={selectedNode.position.x}
-                  onChange={(e) => {
-                    const x = parseFloat(e.target.value)
-                    if (!isNaN(x)) {
-                      selectedNode.position.x = x
-                      onUpdateNode(selectedNode.id, selectedNode.data)
-                    }
-                  }}
+          {showFontSize && (
+            <div className="space-y-2">
+              <Label>Font Size</Label>
+              <div className="flex items-center gap-4">
+                <Slider
+                  value={[selectedNode.data.fontSize || 14]}
+                  min={8}
+                  max={72}
+                  step={1}
+                  onValueChange={([value]) => onUpdateNode(selectedNode.id, {
+                    ...selectedNode.data,
+                    fontSize: value
+                  })}
                 />
-              </div>
-              <div>
-                <Label className="text-xs">Y</Label>
-                <Input
-                  type="number"
-                  value={selectedNode.position.y}
-                  onChange={(e) => {
-                    const y = parseFloat(e.target.value)
-                    if (!isNaN(y)) {
-                      selectedNode.position.y = y
-                      onUpdateNode(selectedNode.id, selectedNode.data)
-                    }
-                  }}
-                />
+                <span className="text-sm w-8">{selectedNode.data.fontSize || 14}px</span>
               </div>
             </div>
-          </div>
+          )}
+
+          {isChart && (
+            <div className="space-y-2">
+              <Label>Chart Data</Label>
+              <ChartDataForm
+                data={selectedNode.data.data || []}
+                onChange={(newData) => onUpdateNode(selectedNode.id, { 
+                  ...selectedNode.data,
+                  data: newData
+                })}
+                showColorPicker={selectedNode.type === 'pieChart'}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

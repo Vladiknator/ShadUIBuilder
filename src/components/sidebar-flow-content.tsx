@@ -4,6 +4,7 @@ import { useState } from 'react'
 import oilJackSvg from '../assets/oiljack_2.svg'
 import pumpSvg from '../assets/pump2.svg'
 import tankSvg from '../assets/tank_sublike.svg'
+import { BarChart, LineChart, PieChart } from 'lucide-react'
 
 interface FlowContentProps {
   onAddNode: (type: string) => void
@@ -14,7 +15,7 @@ interface Category {
   items: {
     type: string
     label: string
-    icon?: string
+    icon?: string | React.ReactNode
   }[]
 }
 
@@ -34,11 +35,19 @@ const categories: Category[] = [
       { type: 'pump', label: 'Pump', icon: pumpSvg },
       { type: 'tank', label: 'Tank', icon: tankSvg }
     ]
+  },
+  {
+    name: 'Charts',
+    items: [
+      { type: 'pieChart', label: 'Pie Chart', icon: <PieChart className="h-4 w-4" /> },
+      { type: 'lineChart', label: 'Line Chart', icon: <LineChart className="h-4 w-4" /> },
+      { type: 'barChart', label: 'Bar Chart', icon: <BarChart className="h-4 w-4" /> }
+    ]
   }
 ]
 
 export function FlowContent({ onAddNode }: FlowContentProps) {
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['HTML', 'Equipment'])
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['HTML', 'Equipment', 'Charts'])
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories(prev => 
@@ -81,8 +90,10 @@ export function FlowContent({ onAddNode }: FlowContentProps) {
                   onDragStart={(e) => onDragStart(e, item.type)}
                   onClick={() => onAddNode(item.type)}
                 >
-                  {item.icon ? (
+                  {typeof item.icon === 'string' ? (
                     <img src={item.icon} className="h-4 w-4" alt={item.label} />
+                  ) : item.icon ? (
+                    item.icon
                   ) : (
                     <div className="h-4 w-4 rounded border border-border flex items-center justify-center text-xs">
                       {item.label[0]}

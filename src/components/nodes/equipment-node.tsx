@@ -15,8 +15,8 @@ const equipmentIcons: { [key: string]: string } = {
 }
 
 const handleStyle = {
-  width: 10,
-  height: 10,
+  width: 15,
+  height: 15,
   background: '#fff',
   border: '2px solid #778899',
   top: '-5px',
@@ -34,6 +34,8 @@ export function EquipmentNode({ data, selected }: NodeProps<EquipmentNodeData>) 
         minWidth={30} 
         minHeight={30}
         keepAspectRatio
+        handleStyle={{width: '10px', height: '10px', borderWidth: '1px' }} 
+        lineStyle={{borderWidth: '2px' }}
       />
       <Handle 
         type="source" 
