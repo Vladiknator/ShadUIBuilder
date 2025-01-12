@@ -138,8 +138,21 @@ export function FlowDashboard() {
 
   // Handle edge updates
   const onConnect = useCallback((params: Connection) => {
-    setEdges(edges => addEdge(params, edges))
-  }, [setEdges])
+    // Find the source and target nodes
+    const sourceNode = nodes.find(node => node.id === params.source)
+    const targetNode = nodes.find(node => node.id === params.target)
+    
+    // Check if either node is a chart type
+    const isChartConnection = ['pieChart', 'lineChart', 'barChart'].includes(sourceNode?.type || '') || 
+                             ['pieChart', 'lineChart', 'barChart'].includes(targetNode?.type || '')
+
+    const edgeType = isChartConnection ? 'straight' : 'smoothstep'
+    
+    setEdges(edges => addEdge({
+      ...params,
+      type: edgeType,
+    }, edges))
+  }, [nodes, setEdges])
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -361,7 +374,7 @@ export function FlowDashboard() {
         >
           <Background />
           <Controls />
-          <MiniMap />
+          <MiniMap zoomable pannable />
         </ReactFlow>
       </div>
 
