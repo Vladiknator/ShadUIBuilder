@@ -93,6 +93,13 @@ const edgeStyles = {
   }
 }
 
+// Add these type definitions after the existing imports
+interface FlowData {
+  title: string
+  nodes: Node[]
+  edges: Edge[]
+}
+
 export function FlowDashboard() {
   // Flow state
   const [nodes, setNodes] = useNodesState([])
@@ -106,6 +113,9 @@ export function FlowDashboard() {
   const [isResizing, setIsResizing] = useState(false)
   const [isPanelVisible, setIsPanelVisible] = useState(true)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
+
+  // Dashboard title state
+  const [dashboardTitle, setDashboardTitle] = useState('My Flow Dashboard')
 
   // Handle properties panel resizing
   useEffect(() => {
@@ -347,10 +357,102 @@ export function FlowDashboard() {
     })
   }, [selectedNode, setNodes])
 
+  // Add these new functions before the return statement
+  const exportFlow = useCallback(() => {
+    const flowData: FlowData = {
+      title: dashboardTitle,
+      nodes,
+      edges
+    }
+    
+    const jsonString = JSON.stringify(flowData, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = url
+    const filename = dashboardTitle.trim() || 'flow-export'
+    link.download = `${filename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [nodes, edges, dashboardTitle])
+
+  const importFlow = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader()
+    const file = event.target.files?.[0]
+    
+    if (!file) return
+
+    fileReader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const flowData: FlowData = JSON.parse(content)
+        
+        setNodes(flowData.nodes)
+        setEdges(flowData.edges)
+        // Set the dashboard title from the imported data
+        if (flowData.title) {
+          setDashboardTitle(flowData.title)
+        }
+        
+        const maxId = Math.max(...flowData.nodes.map(node => {
+          const idNum = parseInt(node.id.replace('node-', ''))
+          return isNaN(idNum) ? 0 : idNum
+        }))
+        setBlockCount(maxId + 1)
+      } catch (error) {
+        console.error('Error importing flow:', error)
+        alert('Error importing flow. Please check the file format.')
+      }
+    }
+
+    fileReader.readAsText(file)
+  }, [setNodes, setEdges])
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar title="Flow Dashboard" isPanelVisible={isPanelVisible} onTogglePanel={() => setIsPanelVisible(!isPanelVisible)}>
-        <FlowContent onAddNode={addNewNode} />
+        <div className="flex flex-col gap-2 p-2">
+          <div className="px-2">
+            <input
+              type="text"
+              value={dashboardTitle}
+              onChange={(e) => setDashboardTitle(e.target.value)}
+              placeholder="Dashboard Title"
+              className="w-full text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       bg-transparent
+                       text-gray-700 dark:text-gray-300
+                       focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500"
+            />
+          </div>
+          <div className="flex gap-1 px-2 w-full">
+            <button
+              onClick={exportFlow}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Export
+            </button>
+            <label className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                            hover:bg-gray-100 dark:hover:bg-gray-700 
+                            text-gray-700 dark:text-gray-300
+                            transition-colors cursor-pointer"
+            >
+              Import
+              <input
+                type="file"
+                accept=".json"
+                onChange={importFlow}
+                className="hidden"
+              />
+            </label>
+          </div>
+          <FlowContent onAddNode={addNewNode} />
+        </div>
       </Sidebar>
 
       <div ref={reactFlowWrapper} className="flex-1 relative">
