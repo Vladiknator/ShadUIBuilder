@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -11,6 +11,11 @@ import { GridBlock } from './grid-block'
 import { BlockTypesContent } from './sidebar-block-types'
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
+
+interface GridData {
+  title: string
+  layouts: { [key: string]: BlockLayout[] }
+}
 
 export function GridDashboard() {
   // Grid and layout state
@@ -25,6 +30,9 @@ export function GridDashboard() {
   const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(256)        // Width of properties panel
   const [isResizing, setIsResizing] = useState(false)                          // Whether panel is being resized
   const [isPanelVisible, setIsPanelVisible] = useState(true)                   // Whether panel is visible
+
+  // Add dashboard title state with existing state declarations
+  const [dashboardTitle, setDashboardTitle] = useState('My Grid Dashboard')
 
   // Update grid width when panel visibility or width changes
   useEffect(() => {
@@ -282,6 +290,60 @@ export function GridDashboard() {
     setBlockCount(blockCount + 1);
   };
 
+  // Add export function before the return statement
+  const exportGrid = useCallback(() => {
+    const gridData: GridData = {
+      title: dashboardTitle,
+      layouts
+    }
+    
+    const jsonString = JSON.stringify(gridData, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = url
+    const filename = dashboardTitle.trim() || 'grid-export'
+    link.download = `${filename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [layouts, dashboardTitle])
+
+  // Add import function
+  const importGrid = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader()
+    const file = event.target.files?.[0]
+    
+    if (!file) return
+
+    fileReader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const gridData: GridData = JSON.parse(content)
+        
+        setLayouts(gridData.layouts)
+        if (gridData.title) {
+          setDashboardTitle(gridData.title)
+        }
+        
+        // Update block count to be higher than any existing block id
+        const allBlocks = Object.values(gridData.layouts).flat()
+        const maxId = Math.max(...allBlocks.map(block => {
+          const idNum = parseInt(block.i.replace('block-', ''))
+          return isNaN(idNum) ? 0 : idNum
+        }))
+        setBlockCount(maxId + 1)
+      } catch (error) {
+        console.error('Error importing grid:', error)
+        alert('Error importing grid. Please check the file format.')
+      }
+    }
+
+    fileReader.readAsText(file)
+  }, [])
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar 
@@ -289,10 +351,48 @@ export function GridDashboard() {
         isPanelVisible={isPanelVisible}
         onTogglePanel={() => setIsPanelVisible(!isPanelVisible)}
       >
-        <BlockTypesContent 
-          onDragStart={handleDragStart}
-          onAddBlock={addNewBlock}
-        />
+        <div className="flex flex-col gap-2 p-2">
+          <div className="px-2">
+            <input
+              type="text"
+              value={dashboardTitle}
+              onChange={(e) => setDashboardTitle(e.target.value)}
+              placeholder="Dashboard Title"
+              className="w-full text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       bg-transparent
+                       text-gray-700 dark:text-gray-300
+                       focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500"
+            />
+          </div>
+          <div className="flex gap-1 px-2 w-full">
+            <button
+              onClick={exportGrid}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Export
+            </button>
+            <label className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                            hover:bg-gray-100 dark:hover:bg-gray-700 
+                            text-gray-700 dark:text-gray-300
+                            transition-colors cursor-pointer"
+            >
+              Import
+              <input
+                type="file"
+                accept=".json"
+                onChange={importGrid}
+                className="hidden"
+              />
+            </label>
+          </div>
+          <BlockTypesContent 
+            onDragStart={handleDragStart}
+            onAddBlock={addNewBlock}
+          />
+        </div>
       </Sidebar>
       
       <div className="flex-1 flex flex-col overflow-hidden">
