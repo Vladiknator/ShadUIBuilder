@@ -26,6 +26,10 @@ import { FlowContent } from './sidebar-flow-content'
 import { HtmlNode } from './nodes/html-node'
 import { EquipmentNode } from './nodes/equipment-node'
 import { ChartNode } from './nodes/chart-node'
+import { v4 as uuidv4 } from 'uuid'
+import { LoadDashboardDialog } from './load-dashboard-dialog'
+import { saveDashboard, getDashboard, exportFlowToFile, parseFlowData } from '../utils/storage'
+import { StoredFlowDashboard } from '../types/storage'
 
 const defaultChartData = {
   pieChart: [
@@ -93,13 +97,6 @@ const edgeStyles = {
   }
 }
 
-// Add these type definitions after the existing imports
-interface FlowData {
-  title: string
-  nodes: Node[]
-  edges: Edge[]
-}
-
 export function FlowDashboard() {
   // Flow state
   const [nodes, setNodes] = useNodesState([])
@@ -116,6 +113,12 @@ export function FlowDashboard() {
 
   // Dashboard title state
   const [dashboardTitle, setDashboardTitle] = useState('My Flow Dashboard')
+
+  // Load dialog state
+  const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false)
+
+  // Add dashboardId to state declarations
+  const [dashboardId, setDashboardId] = useState<string>(uuidv4())
 
   // Handle properties panel resizing
   useEffect(() => {
@@ -357,28 +360,12 @@ export function FlowDashboard() {
     })
   }, [selectedNode, setNodes])
 
-  // Add these new functions before the return statement
+  // Update exportFlow function to use the new utility
   const exportFlow = useCallback(() => {
-    const flowData: FlowData = {
-      title: dashboardTitle,
-      nodes,
-      edges
-    }
-    
-    const jsonString = JSON.stringify(flowData, null, 2)
-    const blob = new Blob([jsonString], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    
-    const link = document.createElement('a')
-    link.href = url
-    const filename = dashboardTitle.trim() || 'flow-export'
-    link.download = `${filename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    exportFlowToFile(dashboardTitle, nodes, edges)
   }, [nodes, edges, dashboardTitle])
 
+  // Update importFlow function to use the new utility
   const importFlow = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader()
     const file = event.target.files?.[0]
@@ -386,29 +373,52 @@ export function FlowDashboard() {
     if (!file) return
 
     fileReader.onload = (e) => {
-      try {
-        const content = e.target?.result as string
-        const flowData: FlowData = JSON.parse(content)
-        
-        setNodes(flowData.nodes)
-        setEdges(flowData.edges)
-        // Set the dashboard title from the imported data
-        if (flowData.title) {
-          setDashboardTitle(flowData.title)
-        }
-        
-        const maxId = Math.max(...flowData.nodes.map(node => {
-          const idNum = parseInt(node.id.replace('node-', ''))
-          return isNaN(idNum) ? 0 : idNum
-        }))
-        setBlockCount(maxId + 1)
-      } catch (error) {
-        console.error('Error importing flow:', error)
+      const content = e.target?.result as string
+      const result = parseFlowData(content)
+      
+      if (result) {
+        setDashboardId(uuidv4())
+        setNodes(result.nodes)
+        setEdges(result.edges)
+        setDashboardTitle(result.title)
+        setBlockCount(result.maxNodeId + 1)
+      } else {
         alert('Error importing flow. Please check the file format.')
       }
     }
 
     fileReader.readAsText(file)
+  }, [setNodes, setEdges])
+
+  // Update saveToLocalStorage function to use the new utility
+  const saveToLocalStorage = useCallback(() => {
+    const flowData: StoredFlowDashboard = {
+      id: dashboardId,
+      title: dashboardTitle,
+      type: 'flow',
+      lastModified: Date.now(),
+      nodes,
+      edges
+    }
+    
+    saveDashboard(flowData)
+    alert('Flow saved successfully!')
+  }, [dashboardId, nodes, edges, dashboardTitle])
+
+  // Update handleLoad function to use the new utility
+  const handleLoad = useCallback((id: string) => {
+    const dashboard = getDashboard(id)
+    if (dashboard && dashboard.type === 'flow') {
+      const result = parseFlowData(dashboard)
+      if (result) {
+        setDashboardId(dashboard.id)
+        setDashboardTitle(result.title)
+        setNodes(result.nodes)
+        setEdges(result.edges)
+        setBlockCount(result.maxNodeId + 1)
+      }
+      setIsLoadDialogOpen(false)
+    }
   }, [setNodes, setEdges])
 
   return (
@@ -450,6 +460,26 @@ export function FlowDashboard() {
                 className="hidden"
               />
             </label>
+          </div>
+          <div className="flex gap-1 px-2 w-full">
+            <button
+              onClick={saveToLocalStorage}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setIsLoadDialogOpen(true)}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Load
+            </button>
           </div>
           <FlowContent onAddNode={addNewNode} />
         </div>
@@ -494,6 +524,13 @@ export function FlowDashboard() {
           />
         </>
       )}
+
+      <LoadDashboardDialog
+        isOpen={isLoadDialogOpen}
+        onClose={() => setIsLoadDialogOpen(false)}
+        onLoad={handleLoad}
+        currentType="flow"
+      />
     </div>
   )
 } 

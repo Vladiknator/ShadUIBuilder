@@ -9,13 +9,12 @@ import { Sidebar } from './sidebar'
 import { GridPropertiesPanel } from './grid-properties-panel'
 import { GridBlock } from './grid-block'
 import { BlockTypesContent } from './sidebar-block-types'
+import { v4 as uuidv4 } from 'uuid'
+import { LoadDashboardDialog } from './load-dashboard-dialog'
+import { saveDashboard, getDashboard, exportGridToFile, parseGridData } from '../utils/storage'
+import { StoredGridDashboard } from '../types/storage'
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
-
-interface GridData {
-  title: string
-  layouts: { [key: string]: BlockLayout[] }
-}
 
 export function GridDashboard() {
   // Grid and layout state
@@ -33,6 +32,8 @@ export function GridDashboard() {
 
   // Add dashboard title state with existing state declarations
   const [dashboardTitle, setDashboardTitle] = useState('My Grid Dashboard')
+  const [dashboardId, setDashboardId] = useState<string>(uuidv4())
+  const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false)
 
   // Update grid width when panel visibility or width changes
   useEffect(() => {
@@ -290,28 +291,12 @@ export function GridDashboard() {
     setBlockCount(blockCount + 1);
   };
 
-  // Add export function before the return statement
+  // Update export function to use the new utility
   const exportGrid = useCallback(() => {
-    const gridData: GridData = {
-      title: dashboardTitle,
-      layouts
-    }
-    
-    const jsonString = JSON.stringify(gridData, null, 2)
-    const blob = new Blob([jsonString], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    
-    const link = document.createElement('a')
-    link.href = url
-    const filename = dashboardTitle.trim() || 'grid-export'
-    link.download = `${filename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    exportGridToFile(dashboardTitle, layouts)
   }, [layouts, dashboardTitle])
 
-  // Add import function
+  // Update import function to use the new utility
   const importGrid = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader()
     const file = event.target.files?.[0]
@@ -319,29 +304,49 @@ export function GridDashboard() {
     if (!file) return
 
     fileReader.onload = (e) => {
-      try {
-        const content = e.target?.result as string
-        const gridData: GridData = JSON.parse(content)
-        
-        setLayouts(gridData.layouts)
-        if (gridData.title) {
-          setDashboardTitle(gridData.title)
-        }
-        
-        // Update block count to be higher than any existing block id
-        const allBlocks = Object.values(gridData.layouts).flat()
-        const maxId = Math.max(...allBlocks.map(block => {
-          const idNum = parseInt(block.i.replace('block-', ''))
-          return isNaN(idNum) ? 0 : idNum
-        }))
-        setBlockCount(maxId + 1)
-      } catch (error) {
-        console.error('Error importing grid:', error)
+      const content = e.target?.result as string
+      const result = parseGridData(content)
+      
+      if (result) {
+        setDashboardId(uuidv4())
+        setLayouts(result.layouts)
+        setDashboardTitle(result.title)
+        setBlockCount(result.maxBlockId + 1)
+      } else {
         alert('Error importing grid. Please check the file format.')
       }
     }
 
     fileReader.readAsText(file)
+  }, [])
+
+  // Update save function to use the new utility
+  const saveToLocalStorage = useCallback(() => {
+    const gridData: StoredGridDashboard = {
+      id: dashboardId,
+      title: dashboardTitle,
+      type: 'grid',
+      lastModified: Date.now(),
+      layouts
+    }
+    
+    saveDashboard(gridData)
+    alert('Dashboard saved successfully!')
+  }, [dashboardId, dashboardTitle, layouts])
+
+  // Update load function to use the new utility
+  const handleLoad = useCallback((id: string) => {
+    const dashboard = getDashboard(id)
+    if (dashboard && dashboard.type === 'grid') {
+      const result = parseGridData(dashboard)
+      if (result) {
+        setDashboardId(dashboard.id)
+        setDashboardTitle(result.title)
+        setLayouts(result.layouts)
+        setBlockCount(result.maxBlockId + 1)
+      }
+      setIsLoadDialogOpen(false)
+    }
   }, [])
 
   return (
@@ -387,6 +392,26 @@ export function GridDashboard() {
                 className="hidden"
               />
             </label>
+          </div>
+          <div className="flex gap-1 px-2 w-full">
+            <button
+              onClick={saveToLocalStorage}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setIsLoadDialogOpen(true)}
+              className="flex-1 text-center text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 
+                       text-gray-700 dark:text-gray-300
+                       transition-colors"
+            >
+              Load
+            </button>
           </div>
           <BlockTypesContent 
             onDragStart={handleDragStart}
@@ -448,6 +473,13 @@ export function GridDashboard() {
           onUpdateBlock={updateBlockProperties}
         />
       )}
+
+      <LoadDashboardDialog
+        isOpen={isLoadDialogOpen}
+        onClose={() => setIsLoadDialogOpen(false)}
+        onLoad={handleLoad}
+        currentType="grid"
+      />
     </div>
   );
 } 
